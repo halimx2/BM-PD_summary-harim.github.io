@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ESMI2 JF2 파라변경이력 양식</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Unit 선택 칸은 기본 숨김 */
+    #unit-div { display: none; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h1 class="mb-4">ESMI2 JF2 파라변경이력 부동내역 양식</h1>
+    <form>
+      <!-- 1. 종류 -->
+      <div class="mb-3">
+        <label for="kind" class="form-label">종류</label>
+        <input type="text" class="form-control" id="kind" placeholder="예: BM/PD/재료교체 등">
+      </div>
+
+      <!-- 2. 호기 · 공정 -->
+      <div class="row mb-3">
+        <div class="col">
+          <label for="machine" class="form-label">호기</label>
+          <select id="machine" class="form-select">
+            <option value="">-- 선택하세요 --</option>
+            <option>3-1</option>
+            <option>3-2</option>
+            <!-- … -->
+          </select>
+        </div>
+        <div class="col">
+          <label for="process" class="form-label">공정</label>
+          <select id="process" class="form-select">
+            <option value="">-- 선택하세요 --</option>
+            <option value="ESP">ESP</option>
+            <option value="Lamination">Lamination</option>
+            <option value="D-Stacking">D-Stacking</option>
+            <option value="Taping">Taping</option>
+            <option value="Inspection">Inspection</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 3. 동적 Unit 선택 -->
+      <div id="unit-div" class="mb-3">
+        <label for="unit" class="form-label">Unit</label>
+        <select id="unit" class="form-select">
+          <!-- 스크립트가 여기에 옵션을 채워 넣습니다 -->
+        </select>
+      </div>
+
+      <!-- 4. 발생시간 · 조치완료시간 (datetime-local) -->
+      <div class="row mb-3">
+        <div class="col">
+          <label for="occur" class="form-label">발생시간</label>
+          <input type="datetime-local" class="form-control" id="occur">
+        </div>
+        <div class="col">
+          <label for="complete" class="form-label">조치완료시간</label>
+          <input type="datetime-local" class="form-control" id="complete">
+        </div>
+      </div>
+
+      <!-- 5. 작업자 -->
+      <div class="mb-3">
+        <label for="operator" class="form-label">작업자</label>
+        <input type="text" class="form-control" id="operator" placeholder="작업자 이름">
+      </div>
+
+      <!-- 6. 현상 -->
+      <div class="mb-3">
+        <label for="symptom" class="form-label">현상</label>
+        <textarea id="symptom" class="form-control" rows="4"></textarea>
+      </div>
+
+      <!-- 7. 조치 -->
+      <div class="mb-3">
+        <label for="action" class="form-label">조치</label>
+        <textarea id="action" class="form-control" rows="4"></textarea>
+      </div>
+
+      <!-- 8. 제출 버튼 -->
+      <button type="submit" class="btn btn-primary">제출</button>
+    </form>
+  </div>
+
+  <!-- Bootstrap JS (필요시) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- 동적 처리 스크립트 -->
+  <script>
+    // 공정별 Unit 목록 (Half Cell 제외)
+    const unitOptions = {
+      ESP: ['01. Electrode. Unwinder'],
+      Lamination: [
+        '01. Separator.Unwinder',
+        '02. Electrode/Separator. Combiner',
+        '03. Laminator',
+        '04. Cell.Final Cutter',
+        '05. Cell.Tracking System',
+        '06. Cell.Inspector',
+        '07. Cell.Unloader',
+        '08. Common'
+      ],
+      'D-Stacking': [
+        '01. Monocell.Loading Conveyor',
+        '02. Monocell.Stacker',
+        '03. Stacked Cell.Transfer'
+      ],
+      Taping: [
+        '01. Shuttle',
+        '02. Half Cell.Loading',
+        '03. Half Cell.Stack',
+        '04. Stacked Cell.Taper[1]',
+        '05. Stacked Cell.Rotator',
+        '06. Stacked Cell.Taper[2]'
+      ],
+      Inspection: [
+        '01. Taped Cell.Inspection',
+        '02. Taped Cell.Transfer',
+        '03. NG Taped Cell.Transfer',
+        '04. Taped Cell.Unloader',
+        '05. Common'
+      ]
+    };
+
+    // DOM 참조
+    const processSelect = document.getElementById('process');
+    const unitDiv       = document.getElementById('unit-div');
+    const unitSelect    = document.getElementById('unit');
+    const occurInput    = document.getElementById('occur');
+    const completeInput = document.getElementById('complete');
+
+    // 페이지 로드 시: 발생/완료 시간 미리 채우기
+    window.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      // Local ISO 포맷(YYYY-MM-DDTHH:MM)
+      const tzOffset = now.getTimezoneOffset() * 60000;
+      const localISO = new Date(now - tzOffset).toISOString().slice(0,16);
+      occurInput.value    = localISO;
+      completeInput.value = localISO;
+    });
+
+    // 공정 선택 변경 시 Unit 옵션 토글
+    processSelect.addEventListener('change', () => {
+      const sel = processSelect.value;
+      unitSelect.innerHTML = '';
+      unitDiv.style.display = 'none';
+
+      if (unitOptions[sel]) {
+        unitOptions[sel].forEach(text => {
+          const opt = document.createElement('option');
+          opt.value = text;
+          opt.text  = text;
+          unitSelect.appendChild(opt);
+        });
+        unitDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
